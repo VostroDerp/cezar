@@ -4204,6 +4204,7 @@ export function createApp(deps: ServerDeps) {
       const { workflows } = await loadWorkflows(repoRoot);
       const wf = workflows.find((w) => w.name === name);
       if (!wf) return c.json({ error: `unknown workflow: ${name}` }, 404);
+      if (wf.global) return c.json({ error: 'global workflows cannot be deleted from a project' }, 400);
       if (wf.source !== 'file' || !wf.path) {
         return c.json({ error: 'built-in workflows cannot be deleted' }, 400);
       }

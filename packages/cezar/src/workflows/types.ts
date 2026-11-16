@@ -108,6 +108,7 @@ export const workflowDefSchema = z.object({
    *  (`graphToSteps`) so every step-reading path keeps working. Absent on v1 workflows. */
   graph: workflowGraphSchema.optional(),
   source: z.enum(['built-in', 'file']),
+  global: z.boolean().optional(),
   path: z.string().optional(),
 });
 

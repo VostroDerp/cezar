@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { cezarHomeDir } from '../paths.ts';
 import { graphIssues, graphToSteps, workflowGraphFileSchema } from './graph.ts';
 import { ASSESS_IMPACT_WORKFLOW, BUILT_IN_GRAPH_WORKFLOWS } from './templates.ts';
 import {
@@ -21,27 +22,32 @@ export interface WorkflowLoadIssue {
 
 /**
  * Load the workflow catalog: the built-in `quick-task` plus every
- * `.ai/cezar/workflows/*.{yaml,yml}` in the repo. File workflows win name
- * collisions with built-ins. Invalid files are reported, never fatal.
+ * `.ai/cezar/workflows/*.{yaml,yml}` in the repo and in the global workflows folder.
+ * Project files win name collisions with global files, which win over built-ins.
+ * Invalid files are reported, never fatal.
  */
 export async function loadWorkflows(
   repoRoot: string,
 ): Promise<{ workflows: WorkflowDef[]; issues: WorkflowLoadIssue[] }> {
-  const dir = resolve(repoRoot, WORKFLOWS_DIR);
   const issues: WorkflowLoadIssue[] = [];
-  const fromFiles: WorkflowDef[] = [];
+  let fromFiles: WorkflowDef[] = [];
 
-  let entries: string[] = [];
-  try {
-    entries = await readdir(dir);
-  } catch {
-    // no workflows dir — built-ins only
+  const files: { path: string; global: boolean }[] = [];
+  for (const [dir, global] of [
+    [join(cezarHomeDir(), 'workflows'), true],
+    [resolve(repoRoot, WORKFLOWS_DIR), false],
+  ] as const) {
+    try {
+      for (const entry of await readdir(dir)) {
+        const ext = extname(entry).toLowerCase();
+        if (ext === '.yaml' || ext === '.yml') files.push({ path: join(dir, entry), global });
+      }
+    } catch {
+      // no workflows dir — nothing from this folder
+    }
   }
 
-  for (const entry of entries) {
-    const ext = extname(entry).toLowerCase();
-    if (ext !== '.yaml' && ext !== '.yml') continue;
-    const path = join(dir, entry);
+  for (const { path, global } of files) {
     try {
       const raw = await readFile(path, 'utf8');
       const doc: unknown = parseYaml(raw);
@@ -69,6 +75,7 @@ export async function loadWorkflows(
           steps: graphToSteps(graphDoc.data),
           graph: { nodes, edges, ...(layout ? { layout } : {}) },
           source: 'file',
+          ...(global ? { global: true } : {}),
           path,
         });
         continue;
@@ -86,12 +93,14 @@ export async function loadWorkflows(
         issues.push({ path, message: issue });
         continue;
       }
-      fromFiles.push({ ...normalized, source: 'file', path });
+      fromFiles.push({ ...normalized, source: 'file', ...(global ? { global: true } : {}), path });
     } catch (err) {
       issues.push({ path, message: err instanceof Error ? err.message : String(err) });
     }
   }
 
+  const projectNames = new Set(fromFiles.filter((w) => !w.global).map((w) => w.name));
+  fromFiles = fromFiles.filter((w) => !w.global || !projectNames.has(w.name));
   const fileNames = new Set(fromFiles.map((w) => w.name));
   const workflows = [
     ...fromFiles,

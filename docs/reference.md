@@ -323,6 +323,12 @@ steps:
       # retryOn: [1]             # optional: only these exit codes loop back
 ```
 
+Workflows saved in `~/.cezar/workflows/` (or `workflows/` under `CEZ_HOME` when
+set) are offered in every project. A project workflow takes precedence over a
+global one of the same name, which takes precedence over a built-in. A global
+workflow is read-only from a project: saving creates a project copy, and
+deleting that copy reveals the global workflow again.
+
 `{{task}}` is replaced with the task text you typed. When a check fails and loops
 back, its failing output — with host secrets, the run's registered secrets and
 known token shapes redacted — is appended to the retried agent's prompt so the

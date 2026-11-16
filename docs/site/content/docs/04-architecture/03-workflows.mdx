@@ -25,7 +25,7 @@ sources:
 ---
 ## Where to save a workflow and which fields to use
 
-Save a `.yaml` or `.yml` file directly in `.ai/cezar/workflows/`. The loader reads files from this directory. It reports each file error separately and continues loading the others. The name field identifies the workflow. If it matches a built-in template, Cezar uses your file.
+Save a `.yaml` or `.yml` file directly in `.ai/cezar/workflows/`. The loader reads files from this directory. It reports each file error separately and continues loading the others. The name field identifies the workflow. If it matches a built-in template, Cezar uses your file. Files in the global folder `~/.cezar/workflows/` are loaded in every project; the order is project file, then global file, then built-in.
 
 In the list format, choose either steps or skills. You cannot declare both. Each step needs a unique id. An agent step contains prompt or skill; a check step contains command. Combining command with prompt fails validation. If you use `onFail.retry`, point it to an earlier step.
 

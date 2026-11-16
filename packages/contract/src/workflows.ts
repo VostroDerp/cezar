@@ -186,6 +186,7 @@ export const workflowDefSchema = z.object({
   /** Present on `version: 2` graph workflows only; `steps` is then derived from its nodes. */
   graph: workflowGraphSchema.optional(),
   source: z.enum(['built-in', 'file']),
+  global: z.boolean().optional(),
   /** Absent on built-ins — which is exactly what makes them undeletable. */
   path: z.string().optional(),
 });
