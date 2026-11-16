@@ -57,6 +57,7 @@ export const graphNodeSchema = z.discriminatedUnion('type', [
     prompt: z.string().optional(),
     skill: z.string().optional(),
     model: z.string().optional(),
+    reasoningEffort: z.string().trim().min(1).max(64).optional(),
     runner: z.enum(RUNNER_IDS).optional(),
     allowedTools: z.array(z.string()).optional(),
     bashAllowlist: z.array(z.string()).optional(),

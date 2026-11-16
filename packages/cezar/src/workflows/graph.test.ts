@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { workflowGraphNodeSchema } from '@open-mercato/cezar-contract';
 import {
   advance,
   compareValues,
@@ -7,6 +8,7 @@ import {
   forkShape,
   globMatch,
   graphIssues,
+  graphNodeSchema,
   graphRailSteps,
   graphToSteps,
   isTerminalAgent,
@@ -40,6 +42,19 @@ const EXAMPLE: WorkflowGraph = {
     { from: 'fix', to: 'tests' },
   ],
 };
+
+describe('agent node schemas', () => {
+  it('validates and trims agent reasoning effort in both graph schemas', () => {
+    for (const schema of [graphNodeSchema, workflowGraphNodeSchema]) {
+      const node = { id: 'a', type: 'agent', prompt: 'work' };
+      expect(schema.parse({ ...node, reasoningEffort: ' high ' })).toMatchObject({ reasoningEffort: 'high' });
+      expect(schema.safeParse(node).success).toBe(true);
+      for (const reasoningEffort of ['', '   ', 'x'.repeat(65), 42]) {
+        expect(schema.safeParse({ ...node, reasoningEffort }).success).toBe(false);
+      }
+    }
+  });
+});
 
 describe('graphIssues', () => {
   it('accepts a sound graph', () => {

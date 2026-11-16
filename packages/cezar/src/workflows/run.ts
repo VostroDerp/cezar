@@ -7114,6 +7114,7 @@ export class RunManager {
                   name: a.name ?? a.id,
                   prompt: '{{task}}',
                   ...(a.skill ? { skill: a.skill } : {}),
+                  ...(a.reasoningEffort ? { reasoningEffort: a.reasoningEffort } : {}),
                   ...(a.allowedTools ? { allowedTools: a.allowedTools } : {}),
                   ...(a.bashAllowlist ? { bashAllowlist: a.bashAllowlist } : {}),
                 },

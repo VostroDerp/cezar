@@ -13,6 +13,22 @@ import type { WorkflowDef } from './types.ts';
 import { track } from '../telemetry.ts';
 
 vi.mock('../telemetry.ts', async (importOriginal) => ({ ...(await importOriginal<object>()), track: vi.fn() }));
+const captured = vi.hoisted(() => ({ efforts: [] as (string | undefined)[] }));
+vi.mock('../core/runner-factory.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../core/runner-factory.ts')>();
+  return {
+    ...actual,
+    createRunner: (...args: Parameters<typeof actual.createRunner>) => {
+      const runner = actual.createRunner(...args);
+      const start = runner.startSession.bind(runner);
+      runner.startSession = (spec, ...rest) => {
+        captured.efforts.push(spec.reasoningEffort);
+        return start(spec, ...rest);
+      };
+      return runner;
+    },
+  };
+});
 
 const run = promisify(execFile);
 const GIT_ID = ['-c', 'user.name=test', '-c', 'user.email=test@local'];
@@ -60,6 +76,23 @@ describe('graph workflows run through RunManager', () => {
   function def(graph: WorkflowGraph): WorkflowDef {
     return { name: 'graph', source: 'file', steps: graphToSteps(graph), graph };
   }
+
+  it('passes node effort to the runner and retains task and runner defaults when omitted', async () => {
+    const graph: WorkflowGraph = {
+      nodes: [
+        { id: 'start', type: 'start' },
+        { id: 'chosen', type: 'agent', prompt: '{{task}}', reasoningEffort: 'high' },
+        { id: 'inherited', type: 'agent', prompt: '{{task}}' },
+      ],
+      edges: [{ from: 'start', to: 'chosen' }, { from: 'chosen', to: 'inherited' }],
+    };
+    captured.efforts.length = 0;
+    expect((await settle(manager.startRun(def(graph), { task: 'work mock:done', worktree: false, runner: 'claude', reasoningEffort: 'low' }).id)).status).not.toBe('failed');
+    expect(captured.efforts).toEqual(['high', 'low']);
+    captured.efforts.length = 0;
+    expect((await settle(manager.startRun(def(graph), { task: 'work mock:done', worktree: false, runner: 'claude' }).id)).status).not.toBe('failed');
+    expect(captured.efforts).toEqual(['high', undefined]);
+  }, 30_000);
 
   // `tests` fails on its first run only. `log` records rendered node refs to a file — the mock
   // agent truncates prompts, so a check command is where the rendering is observable.
@@ -259,7 +292,7 @@ describe('graph workflows run through RunManager', () => {
         'name: graph-flow',
         'nodes:',
         '  - { id: start, type: start }',
-        '  - { id: work, type: agent, prompt: "{{task}}" }',
+        '  - { id: work, type: agent, prompt: "{{task}}", reasoningEffort: high }',
         '  - { id: verify, type: check, command: "true" }',
         'edges:',
         '  - { from: start, to: work }',
@@ -270,6 +303,8 @@ describe('graph workflows run through RunManager', () => {
     const { workflows, issues } = await loadWorkflows(repoRoot);
     const graph = workflows.find((w) => w.name === 'graph-flow');
     expect(graph?.steps.map((s) => s.id)).toEqual(['work', 'verify']);
+    expect(graph?.steps[0]?.reasoningEffort).toBe('high');
+    expect(graph?.graph?.nodes.find((n) => n.id === 'work')).toMatchObject({ reasoningEffort: 'high' });
     expect(graph?.graph?.nodes).toHaveLength(3);
     expect(issues.map((i) => i.message).join()).toMatch(/exactly one start node/);
     expect(workflows.some((w) => w.name === 'quick-task')).toBe(true);

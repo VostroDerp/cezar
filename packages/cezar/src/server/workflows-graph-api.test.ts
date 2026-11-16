@@ -30,7 +30,7 @@ describe('the workflow graph API', () => {
   const GRAPH = {
     nodes: [
       { id: 'start', type: 'start' },
-      { id: 'work', type: 'agent', prompt: '{{task}}' },
+      { id: 'work', type: 'agent', prompt: '{{task}}', reasoningEffort: 'high' },
       { id: 'review', type: 'agent', skill: 'code-review', verdicts: ['approve', 'changes'] },
       { id: 'tests', type: 'check', command: 'npm test' },
     ],
@@ -86,7 +86,7 @@ describe('the workflow graph API', () => {
     expect(created.status).toBe(201);
     const { path } = (await created.json()) as { path: string };
     expect(path.endsWith('.ai/cezar/workflows/review-flow.yaml')).toBe(true);
-    expect(parseYaml(readFileSync(path, 'utf8'))).toMatchObject({ version: 2, name: 'Review Flow', layout: GRAPH.layout });
+    expect(parseYaml(readFileSync(path, 'utf8'))).toMatchObject({ version: 2, name: 'Review Flow', nodes: GRAPH.nodes, layout: GRAPH.layout });
 
     const again = await post('/api/v1/workflows/graph', { name: 'Review Flow', graph: GRAPH });
     expect(again.status).toBe(409);
@@ -112,7 +112,8 @@ describe('the workflow graph API', () => {
     expect(v2.status).toBe(200);
     const body = (await v2.json()) as { steps: { id: string }[]; graph?: unknown };
     expect(body.steps.map((s) => s.id)).toEqual(['work', 'review', 'tests']);
-    expect(body.graph).toBeDefined();
+    expect(body.graph).toMatchObject({ nodes: GRAPH.nodes });
+    expect(body.steps[0]).toMatchObject({ reasoningEffort: 'high' });
 
     const v1 = await post('/api/v1/workflows/parse', { yaml: 'name: s\nskills: [a, b]\n' });
     expect(await v1.json()).toEqual({

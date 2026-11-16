@@ -453,7 +453,7 @@ whose counter never resets within a run, so every run is finite.
 | --- | --- | --- |
 | `start` / `end` | `next` / — (`status: success\|failed`) | — |
 | `loop` (`max`) | `repeat`, `exhausted` | `iteration`, `max` |
-| `agent` (`prompt`, `skill`, `runner`, `model`, `session.continue`, `verdicts`; after a fork also `review`, `budgetUsd`) | `done`, `failed` — or one port per verdict | `summary`, `verdict`, `costUsd` (a fork branch: `runId`, `status`, `summary`) |
+| `agent` (`prompt`, `skill`, `runner`, `model`, `reasoningEffort`, `session.continue`, `verdicts`; after a fork also `review`, `budgetUsd`) | `done`, `failed` — or one port per verdict | `summary`, `verdict`, `costUsd` (a fork branch: `runId`, `status`, `summary`) |
 | `check` (`command`) | `pass`, `fail` | `exitCode`, `output` |
 | `gate.human` (`message`, `timeoutMs?`) | `approve`, `reject` (+`timeout`) | `comment` |
 | `ask-user` (`question`, `options?`, `timeoutMs?`) | `answered` (+`timeout`) | `answer` |
@@ -471,6 +471,11 @@ whose counter never resets within a run, so every run is finite.
 | `github.pr-update` (`ready?`, `addLabels?`, `reviewers?`) | `done`, `failed` | — |
 | `github.issue-comment` (`body`, `issue?` — default: the task's issue) | `done`, `failed` | `issue` |
 | `notify.webhook` (`url`, `body?` — needs `CEZ_WORKFLOW_WEBHOOKS=1`) | `done`, `failed` | `status` |
+
+An agent's optional `reasoningEffort` is resolved as: the node's value, else the task's
+value when the node runs on the task's runner, else the runner's default. A fork branch never
+inherits the task's effort. An effort on a node whose runner has no effort control is refused
+before the run starts, except on a fork branch, where the child task fails when it starts.
 
 - **Fork / join.** Each fork port leads to one agent node, and every one of those agents
   leads into the same `join`. The agents run at once as subtasks through dispatch — fresh
