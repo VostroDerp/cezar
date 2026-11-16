@@ -44,6 +44,14 @@ const EXAMPLE: WorkflowGraph = {
 };
 
 describe('agent node schemas', () => {
+  it('accepts only supported sandbox values in both graph schemas', () => {
+    for (const schema of [graphNodeSchema, workflowGraphNodeSchema]) {
+      const node = { id: 'a', type: 'agent', prompt: 'work' };
+      for (const sandbox of ['read-only', 'no-network']) expect(schema.parse({ ...node, sandbox })).toMatchObject({ sandbox });
+      expect(schema.safeParse({ ...node, sandbox: 'invalid' }).success).toBe(false);
+    }
+  });
+
   it('validates and trims agent reasoning effort in both graph schemas', () => {
     for (const schema of [graphNodeSchema, workflowGraphNodeSchema]) {
       const node = { id: 'a', type: 'agent', prompt: 'work' };

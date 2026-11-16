@@ -74,6 +74,7 @@ export interface AgentRunSpec {
    *  (AGENT_PROTOCOL.md); a runner that cannot has to fail the run. Set only for a manager's
    *  read-only work: an Ask task's read-only tools are not this (spec 2026-10-31-managers). */
   enforceReadOnly?: boolean;
+  sandbox?: 'read-only' | 'no-network';
   /** Extra env vars for the agent process (merged over `process.env`) —
    *  e.g. CEZ_HANDOFF_FILE / CEZ_TODOS_FILE / CEZ_TASK_ID (spec 007). */
   env?: Record<string, string>;

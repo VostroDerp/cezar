@@ -43,6 +43,7 @@ export const workflowStepSchema = z
      *  has ever been able to write the legacy id THERE either, because this same enum was
      *  the only way in: there is no legacy shape to keep parseable. */
     runner: z.enum(RUNNER_IDS).optional(),
+    sandbox: z.enum(['read-only', 'no-network']).optional(),
     allowedTools: z.array(z.string()).optional(),
     bashAllowlist: z.array(z.string()).optional(),
     // check step
@@ -68,6 +69,9 @@ export const workflowStepSchema = z
   })
   .refine((s) => Boolean(s.command) !== Boolean(s.prompt ?? s.skill), {
     message: 'a step is either an agent step (prompt/skill) or a check step (command), not both',
+  })
+  .refine((s) => !s.sandbox || !s.command, {
+    message: 'sandbox: is for agent steps only',
   })
   .refine((s) => !s.secrets || Boolean(s.command), {
     message: 'secrets: is for check steps only — an agent step never receives a secret',
@@ -150,7 +154,7 @@ export function skillStackOf(steps: WorkflowStepDef[]): string[] | null {
     if (stepKind(s) !== 'agent' || !s.skill) return null;
     if (s.prompt !== undefined && s.prompt !== '{{task}}') return null;
     if (s.name !== undefined && s.name !== s.skill) return null;
-    if (s.model || s.reasoningEffort || s.runner || s.allowedTools || s.bashAllowlist || s.onFail) return null;
+    if (s.model || s.reasoningEffort || s.runner || s.sandbox || s.allowedTools || s.bashAllowlist || s.onFail) return null;
     skills.push(s.skill);
   }
   return skills.length ? skills : null;

@@ -6090,6 +6090,7 @@ export class RunManager {
           cwd: state.cwd,
           allowedTools: state.readOnly ? READ_ONLY_TOOLS : toolsStep?.allowedTools ?? DEFAULT_ALLOWED_TOOLS,
           ...(state.enforceReadOnly ? { enforceReadOnly: true } : {}),
+          sandbox: toolsStep?.sandbox,
           bashAllowlist: state.readOnly ? undefined : toolsStep?.bashAllowlist,
           additionalDirectories: agentDirectories(
             join(this.dataDir, 'runs'),
@@ -7115,6 +7116,7 @@ export class RunManager {
                   prompt: '{{task}}',
                   ...(a.skill ? { skill: a.skill } : {}),
                   ...(a.reasoningEffort ? { reasoningEffort: a.reasoningEffort } : {}),
+                  ...(a.sandbox ? { sandbox: a.sandbox } : {}),
                   ...(a.allowedTools ? { allowedTools: a.allowedTools } : {}),
                   ...(a.bashAllowlist ? { bashAllowlist: a.bashAllowlist } : {}),
                 },
@@ -8296,6 +8298,7 @@ export class RunManager {
           cwd: state.cwd,
           allowedTools: state.readOnly ? READ_ONLY_TOOLS : step.allowedTools ?? DEFAULT_ALLOWED_TOOLS,
           ...(state.enforceReadOnly ? { enforceReadOnly: true } : {}),
+          sandbox: step.sandbox,
           bashAllowlist: state.readOnly ? undefined : step.bashAllowlist,
           // The handoff file lives outside the worktree — grant access.
           additionalDirectories: agentDirectories(

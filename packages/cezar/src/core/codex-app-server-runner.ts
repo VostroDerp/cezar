@@ -77,11 +77,11 @@ const RESUME_LOCK_RETRY_MS: readonly number[] = [250, 500, 1_000, 2_000, 4_000, 
  * publish (spec 2026-10-22-html-artifacts-and-impact).
  */
 export function codexThreadOverrides(
-  spec: Pick<AgentRunSpec, 'model' | 'cwd' | 'env' | 'enforceReadOnly'>,
+  spec: Pick<AgentRunSpec, 'model' | 'cwd' | 'env' | 'enforceReadOnly' | 'sandbox'>,
   mcpConfig: Record<string, unknown> | undefined,
   env: NodeJS.ProcessEnv = process.env,
 ): Record<string, unknown> {
-  const sandboxed = env.CEZ_CODEX_NETWORK === '0';
+  const sandboxed = spec.sandbox === 'no-network' || env.CEZ_CODEX_NETWORK === '0';
   const artifacts = sandboxed ? spec.env?.CEZ_ARTIFACTS_DIR : undefined;
   // Private MCP servers (spec 2026-10-07-private-project-mcp) ride in as per-server dotted
   // config overrides, so the user's own [mcp_servers] table is extended, never replaced.
@@ -91,7 +91,7 @@ export function codexThreadOverrides(
   return {
     model: spec.model,
     cwd: spec.cwd,
-    sandbox: spec.enforceReadOnly ? 'read-only' : sandboxed ? 'workspace-write' : 'danger-full-access',
+    sandbox: spec.enforceReadOnly || spec.sandbox === 'read-only' ? 'read-only' : sandboxed ? 'workspace-write' : 'danger-full-access',
     approvalPolicy: 'never',
     config,
   };

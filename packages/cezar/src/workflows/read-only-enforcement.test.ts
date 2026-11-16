@@ -81,6 +81,28 @@ describe('read-only enforcement is a manager opt-in', { timeout: 20_000 }, () =>
     expect(spec.mcpServers?.map((server) => server.name)).toEqual(['tracker']);
   });
 
+  it('a step sandbox keeps private MCP and survives Continue', async () => {
+    const workflow: WorkflowDef = { ...QUICK, name: 'sandboxed-task', source: 'file', steps: [{ ...QUICK.steps[0]!, sandbox: 'read-only' }] };
+    const record = manager!.startRun(workflow, { task: 'review', runner: 'claude' });
+    await vi.waitFor(() => expect(captured.launches).toHaveLength(1), { timeout: 15_000 });
+    const spec = captured.launches[0]!.spec;
+    expect(spec.sandbox).toBe('read-only');
+    expect(spec.enforceReadOnly).toBeUndefined();
+    expect(spec.env?.GH_CONFIG_DIR).toBeUndefined();
+    expect(spec.mcpServers?.map((server) => server.name)).toEqual(['tracker']);
+    await settled(record.id);
+    expect(manager!.continueRun(record.id, { text: 'continue' })).toMatchObject({ ok: true });
+    await vi.waitFor(() => expect(captured.launches).toHaveLength(2), { timeout: 15_000 });
+    expect(captured.launches[1]!.spec.sandbox).toBe('read-only');
+  });
+
+  it('forwards no-network alongside task-level enforcement', async () => {
+    const workflow: WorkflowDef = { ...QUICK, name: 'sandboxed-task', source: 'file', steps: [{ ...QUICK.steps[0]!, sandbox: 'no-network' }] };
+    manager!.startRun(workflow, { task: 'review', runner: 'codex', readOnly: true, enforceReadOnly: true });
+    await vi.waitFor(() => expect(captured.launches).toHaveLength(1), { timeout: 15_000 });
+    expect(captured.launches[0]!.spec).toMatchObject({ sandbox: 'no-network', enforceReadOnly: true, mcpServers: [] });
+  });
+
   it('a manager read-only task is enforced, logged out and without private MCP', async () => {
     const { record, spec } = await launch({ readOnly: true, enforceReadOnly: true });
     expect(record).toMatchObject({ readOnly: true, enforceReadOnly: true });

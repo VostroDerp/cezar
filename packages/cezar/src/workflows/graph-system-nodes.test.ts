@@ -428,7 +428,7 @@ describe('graph system nodes', () => {
       { id: 'start', type: 'start' },
       { id: 'made', type: 'check', command: 'echo implemented > made.txt' },
       { id: 'council', type: 'fork', branches: 2 },
-      { id: 'correctness', type: 'agent', name: 'Correctness', prompt: 'review A mock:done', review: true, reasoningEffort: 'high' },
+      { id: 'correctness', type: 'agent', name: 'Correctness', prompt: 'review A mock:done', review: true, reasoningEffort: 'high', sandbox: 'read-only' },
       { id: 'tests', type: 'agent', prompt: 'review B mock:done' },
       { id: 'meet', type: 'join', wait: 'all' },
       { id: 'after', type: 'check', command: 'echo "{{nodes.correctness.status}}+{{nodes.tests.status}}+{{nodes.meet.succeeded}}" > fan.txt' },
@@ -458,6 +458,7 @@ describe('graph system nodes', () => {
     expect(children.find((c) => c.title === 'Correctness')?.dispatch).toMatchObject({ kind: 'review', reviewOf: [final.branch] });
     expect(children.find((c) => c.title === 'tests')?.dispatch?.kind).toBeUndefined();
     expect(children.find((c) => c.title === 'Correctness')?.workflowDef?.steps[0]?.reasoningEffort).toBe('high');
+    expect(children.find((c) => c.title === 'Correctness')?.workflowDef?.steps[0]?.sandbox).toBe('read-only');
     expect(children.find((c) => c.title === 'tests')?.workflowDef?.steps[0]?.reasoningEffort).toBeUndefined();
     // Each branch agent is its own row on the rail, and the walk records both paths.
     expect(final.steps.find((s) => s.id === 'correctness')?.status).toBe('done');

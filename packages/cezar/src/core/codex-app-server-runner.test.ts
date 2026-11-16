@@ -742,6 +742,14 @@ describe('the artifacts directory under the Codex sandbox (spec 2026-10-22-html-
     });
   });
 
+  it('honors step sandboxes and task read-only precedence', () => {
+    expect(codexThreadOverrides({ ...spec, sandbox: 'read-only' }, undefined, {}).sandbox).toBe('read-only');
+    const restricted = codexThreadOverrides({ ...spec, sandbox: 'no-network' }, undefined, {});
+    expect(restricted.sandbox).toBe('workspace-write');
+    expect(restricted.config).toEqual({ 'sandbox_workspace_write.writable_roots': ['/data/artifacts/r1'] });
+    expect(codexThreadOverrides({ ...spec, sandbox: 'no-network', enforceReadOnly: true }, undefined, {}).sandbox).toBe('read-only');
+  });
+
   it('leaves the default full-access overrides byte-identical', () => {
     expect(codexThreadOverrides(spec, undefined, {})).toEqual({
       model: 'gpt-5',

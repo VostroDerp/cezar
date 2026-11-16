@@ -484,7 +484,7 @@ export function buildClaudeArgs(
     args.push('--allowedTools', allowed.join(','));
   }
   // Settings allow rules widen `--allowedTools`; only a deny rule outranks them.
-  if (spec.enforceReadOnly) {
+  if (spec.enforceReadOnly || spec.sandbox === 'read-only') {
     args.push('--disallowedTools', CLAUDE_WRITE_TOOLS.join(','));
   }
   if (spec.model) {

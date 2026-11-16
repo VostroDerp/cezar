@@ -248,6 +248,19 @@ describe('opencode serve startup', () => {
     spawnHook.override = null;
   });
 
+  it.each([undefined, 'read-only'] as const)('passes the step sandbox into OpenCode config (%s)', (sandbox) => {
+    let env: NodeJS.ProcessEnv | undefined;
+    spawnHook.override = (_bin, _args, options) => {
+      env = (options as { env: NodeJS.ProcessEnv }).env;
+      return silentChild();
+    };
+    vi.useFakeTimers();
+    const session = new OpencodeServerRunner({ bin: 'opencode', timeoutMs: 0 }).startSession({ userPrompt: 'do it', cwd: process.cwd(), sandbox });
+    void session.result.catch(() => undefined);
+    if (sandbox) expect(JSON.parse(env!.OPENCODE_CONFIG_CONTENT!).permission).toMatchObject({ edit: 'deny', bash: 'deny' });
+    else expect(env!.OPENCODE_CONFIG_CONTENT).toBeUndefined();
+  });
+
   it.each([0, 0.5, 0.99999])('passes a random port in 40000–59999 and exposes the PID synchronously (random=%s)', (random) => {
     let argv: unknown;
     spawnHook.override = (_bin, args) => {

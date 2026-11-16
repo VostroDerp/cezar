@@ -87,6 +87,9 @@ const READ_ONLY_ENFORCED: Record<AgentBackend, boolean> = {
   antigravity: false,
 };
 
+/** A step's `sandbox: read-only` is read by these runners themselves; the others refuse it. */
+const STEP_READ_ONLY: ReadonlySet<AgentBackend> = new Set(['claude', 'claude-cli', 'codex', 'opencode']);
+
 export function canEnforceReadOnly(backend: AgentBackend): boolean {
   return READ_ONLY_ENFORCED[backend];
 }
@@ -98,6 +101,12 @@ export function readOnlyUnsupportedMessage(backend: string): string {
 function guardWorkingDirectory(runner: AgentRunner): AgentRunner {
   const check = (spec: AgentRunSpec): void => {
     if (spec.enforceReadOnly && !READ_ONLY_ENFORCED[runner.backend]) throw new Error(readOnlyUnsupportedMessage(runner.backend));
+    if (spec.sandbox === 'read-only' && !STEP_READ_ONLY.has(runner.backend)) {
+      throw new Error(`${runner.backend} cannot keep this step read-only, so cezar will not start it there. Pick claude, codex or opencode for this step, or remove its sandbox.`);
+    }
+    if (!spec.enforceReadOnly && spec.sandbox === 'no-network' && runner.backend !== 'codex') {
+      throw new Error(`${runner.backend} cannot enforce the no-network sandbox, so cezar will not start this step there. Pick codex for this step, or remove its sandbox.`);
+    }
     if (!existsSync(spec.cwd)) throw new Error(missingWorkingDirectoryMessage(runner.backend, spec.cwd));
     const lowDisk = diskFloorRefusal(runner.backend, spec.cwd);
     if (lowDisk) throw new Error(lowDisk);

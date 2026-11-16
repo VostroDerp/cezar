@@ -459,7 +459,7 @@ whose counter never resets within a run, so every run is finite.
 | --- | --- | --- |
 | `start` / `end` | `next` / — (`status: success\|failed`) | — |
 | `loop` (`max`) | `repeat`, `exhausted` | `iteration`, `max` |
-| `agent` (`prompt`, `skill`, `runner`, `model`, `reasoningEffort`, `session.continue`, `verdicts`; after a fork also `review`, `budgetUsd`) | `done`, `failed` — or one port per verdict | `summary`, `verdict`, `costUsd` (a fork branch: `runId`, `status`, `summary`) |
+| `agent` (`prompt`, `skill`, `runner`, `model`, `reasoningEffort`, `sandbox`, `session.continue`, `verdicts`; after a fork also `review`, `budgetUsd`) | `done`, `failed` — or one port per verdict | `summary`, `verdict`, `costUsd` (a fork branch: `runId`, `status`, `summary`) |
 | `check` (`command`) | `pass`, `fail` | `exitCode`, `output` |
 | `gate.human` (`message`, `timeoutMs?`) | `approve`, `reject` (+`timeout`) | `comment` |
 | `ask-user` (`question`, `options?`, `timeoutMs?`) | `answered` (+`timeout`) | `answer` |
@@ -477,6 +477,19 @@ whose counter never resets within a run, so every run is finite.
 | `github.pr-update` (`ready?`, `addLabels?`, `reviewers?`) | `done`, `failed` | — |
 | `github.issue-comment` (`body`, `issue?` — default: the task's issue) | `done`, `failed` | `issue` |
 | `notify.webhook` (`url`, `body?` — needs `CEZ_WORKFLOW_WEBHOOKS=1`) | `done`, `failed` | `status` |
+
+An agent (or a workflow step) can set `sandbox: read-only` or `sandbox: no-network`. It limits
+the program's own file and shell tools, not MCP tools, and it keeps the task's worktree, GitHub
+login and private MCP servers. Per backend:
+
+- `read-only` on Claude: `Bash` and the write tools are denied, so there is no `gh` either.
+- `read-only` on Codex: its `read-only` sandbox. `no-network`: its `workspace-write` sandbox.
+- `read-only` on OpenCode: `edit` and `bash` are denied, with the same strength as an enforced
+  read-only task; not verified against OpenCode 2.x session permissions.
+- Every other program refuses the step when it starts, and `no-network` is refused on all but Codex.
+
+A task-level enforced read-only takes precedence. A Continue takes the last agent step's value.
+Without `sandbox` a step behaves as before.
 
 An agent's optional `reasoningEffort` is resolved as: the node's value, else the task's
 value when the node runs on the task's runner, else the runner's default. A fork branch never

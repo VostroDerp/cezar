@@ -59,6 +59,7 @@ export const graphNodeSchema = z.discriminatedUnion('type', [
     model: z.string().optional(),
     reasoningEffort: z.string().trim().min(1).max(64).optional(),
     runner: z.enum(RUNNER_IDS).optional(),
+    sandbox: z.enum(['read-only', 'no-network']).optional(),
     allowedTools: z.array(z.string()).optional(),
     bashAllowlist: z.array(z.string()).optional(),
     /** Author-declared outcomes (D10/D17). The agent picks one by ending its turn with

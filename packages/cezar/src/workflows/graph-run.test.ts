@@ -13,7 +13,7 @@ import type { WorkflowDef } from './types.ts';
 import { track } from '../telemetry.ts';
 
 vi.mock('../telemetry.ts', async (importOriginal) => ({ ...(await importOriginal<object>()), track: vi.fn() }));
-const captured = vi.hoisted(() => ({ efforts: [] as (string | undefined)[] }));
+const captured = vi.hoisted(() => ({ efforts: [] as (string | undefined)[], sandboxes: [] as (string | undefined)[] }));
 vi.mock('../core/runner-factory.ts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../core/runner-factory.ts')>();
   return {
@@ -23,6 +23,7 @@ vi.mock('../core/runner-factory.ts', async (importOriginal) => {
       const start = runner.startSession.bind(runner);
       runner.startSession = (spec, ...rest) => {
         captured.efforts.push(spec.reasoningEffort);
+        captured.sandboxes.push(spec.sandbox);
         return start(spec, ...rest);
       };
       return runner;
@@ -92,6 +93,22 @@ describe('graph workflows run through RunManager', () => {
     captured.efforts.length = 0;
     expect((await settle(manager.startRun(def(graph), { task: 'work mock:done', worktree: false, runner: 'claude' }).id)).status).not.toBe('failed');
     expect(captured.efforts).toEqual(['high', undefined]);
+  }, 30_000);
+
+  it('passes node sandbox to the runner for a plain node and a session.continue node', async () => {
+    const graph: WorkflowGraph = {
+      nodes: [
+        { id: 'start', type: 'start' },
+        { id: 'first', type: 'agent', prompt: '{{task}}', sandbox: 'read-only' },
+        { id: 'second', type: 'agent', prompt: 'again mock:done', sandbox: 'read-only', session: { continue: 'first' } },
+        { id: 'open', type: 'agent', prompt: 'free mock:done' },
+        { id: 'ok', type: 'end', status: 'success' },
+      ],
+      edges: [{ from: 'start', to: 'first' }, { from: 'first', to: 'second' }, { from: 'second', to: 'open' }, { from: 'open', to: 'ok' }],
+    };
+    captured.sandboxes.length = 0;
+    expect((await settle(manager.startRun(def(graph), { task: 'work mock:done', worktree: false, runner: 'claude' }).id)).status).not.toBe('failed');
+    expect(captured.sandboxes).toEqual(['read-only', 'read-only', undefined]);
   }, 30_000);
 
   // `tests` fails on its first run only. `log` records rendered node refs to a file — the mock

@@ -2,7 +2,10 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ClaudeCliRunner } from './claude-cli-runner.ts';
+import { CodexAppServerRunner } from './codex-app-server-runner.ts';
+import { OpencodeServerRunner } from './opencode-server-runner.ts';
 import { buildGeminiArgs } from './gemini-acp-runner.ts';
 import { opencodeReadOnlyConfig } from './private-mcp.ts';
 import { createRunner, readOnlyUnsupportedMessage } from './runner-factory.ts';
@@ -64,5 +67,25 @@ describe('read-only on the newer backends', () => {
     const spec = { userPrompt: 'x', cwd: tmpdir(), enforceReadOnly: true };
     await expect(createRunner(backend).run(spec)).rejects.toThrow(readOnlyUnsupportedMessage(backend));
     expect(() => createRunner(backend).startSession(spec)).toThrow(readOnlyUnsupportedMessage(backend));
+  });
+});
+
+describe('step sandbox refusal', () => {
+  it.each(['claude', 'opencode', 'cursor', 'pi', 'junie', 'copilot', 'gemini', 'kimi', 'omp', 'antigravity'] as const)('refuses no-network on %s', async (backend) => {
+    const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'no-network' as const };
+    await expect(createRunner(backend).run(spec)).rejects.toThrow(/cannot enforce the no-network sandbox/);
+    expect(() => createRunner(backend).startSession(spec)).toThrow(/cannot enforce the no-network sandbox/);
+  });
+  it.each(['pi', 'kimi', 'omp', 'antigravity'] as const)('refuses a read-only step on %s', async (backend) => {
+    const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'read-only' as const };
+    await expect(createRunner(backend).run(spec)).rejects.toThrow(/cannot keep this step read-only/);
+    expect(() => createRunner(backend).startSession(spec)).toThrow(/cannot keep this step read-only/);
+  });
+  it.each([['claude', ClaudeCliRunner], ['codex', CodexAppServerRunner], ['opencode', OpencodeServerRunner]] as const)('hands a read-only step to %s unchanged', (backend, Runner) => {
+    const start = vi.spyOn(Runner.prototype, 'startSession').mockReturnValue(undefined as never);
+    const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'read-only' as const };
+    createRunner(backend).startSession(spec);
+    expect(start).toHaveBeenCalledWith(spec, undefined, undefined);
+    start.mockRestore();
   });
 });

@@ -33,6 +33,7 @@ export const workflowStepDefSchema = z
     reasoningEffort: reasoningEffortSchema.optional(),
     /** Per-step agent backend override (falls back to the task / config default). */
     runner: runnerSchema.optional(),
+    sandbox: z.enum(['read-only', 'no-network']).optional(),
     allowedTools: z.array(z.string()).optional(),
     bashAllowlist: z.array(z.string()).optional(),
     // check step
@@ -51,6 +52,9 @@ export const workflowStepDefSchema = z
   })
   .refine((s) => Boolean(s.command) !== Boolean(s.prompt ?? s.skill), {
     message: 'a step is either an agent step (prompt/skill) or a check step (command), not both',
+  })
+  .refine((s) => !s.sandbox || !s.command, {
+    message: 'sandbox: is for agent steps only',
   })
   .refine((s) => !s.secrets || Boolean(s.command), {
     message: 'secrets: is for check steps only — an agent step never receives a secret',
@@ -105,6 +109,7 @@ export const workflowGraphNodeSchema = z.discriminatedUnion('type', [
     model: z.string().optional(),
     reasoningEffort: reasoningEffortSchema.optional(),
     runner: runnerSchema.optional(),
+    sandbox: z.enum(['read-only', 'no-network']).optional(),
     allowedTools: z.array(z.string()).optional(),
     bashAllowlist: z.array(z.string()).optional(),
     verdicts: z.array(verdictName).min(1).optional(),

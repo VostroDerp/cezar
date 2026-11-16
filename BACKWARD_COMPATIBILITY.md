@@ -389,6 +389,8 @@ The `version: 2` graph format (spec `2026-09-30-workflow-node-editor`, `packages
 
 Additive: a graph agent node accepts an optional `reasoningEffort`; a node without it behaves exactly as before.
 
+Additive: a step and a graph agent node accept an optional `sandbox` (`read-only` | `no-network`); one without it behaves exactly as before.
+
 Breaking: renaming a key, tightening a refinement so previously valid files fail to load, changing `{{task}}` substitution, changing `onFail` semantics (retry target, `max` default of 2), or removing a `runner` value. Note the loader already degrades per file (bad files are reported in `issues` and skipped, `cezar run` prints `! skipped …`) — but "your existing workflow is now skipped" is still a break. Required path: accept the old spelling alongside the new, and have `POST /api/workflows` keep writing the most portable form.
 
 ## 5. Skills Markdown format (`packages/cezar/src/skills.ts`)

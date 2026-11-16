@@ -85,6 +85,11 @@ describe('buildClaudeArgs enforceReadOnly', () => {
     expect(args[args.indexOf('--disallowedTools') + 1]).toBe('Bash,Edit,Write,MultiEdit,NotebookEdit');
   });
 
+  it('denies writes for a read-only step', () => {
+    const args = buildClaudeArgs({ ...spec, sandbox: 'read-only' });
+    expect(args[args.indexOf('--disallowedTools') + 1]).toBe('Bash,Edit,Write,MultiEdit,NotebookEdit');
+  });
+
   it('denies nothing on an ordinary run', () => {
     expect(buildClaudeArgs(spec)).not.toContain('--disallowedTools');
   });
