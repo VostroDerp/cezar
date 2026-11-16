@@ -488,7 +488,7 @@ login and private MCP servers. Per backend:
   read-only task; not verified against OpenCode 2.x session permissions.
 - Every other program refuses the step when it starts, and `no-network` is refused on all but Codex.
 
-A task-level enforced read-only takes precedence. A Continue takes the last agent step's value.
+A task-level enforced read-only takes precedence for Codex (its `read-only` sandbox, which also blocks the network); `no-network` is still refused on every other program. A Continue takes the last agent step's value.
 Without `sandbox` a step behaves as before.
 
 An agent's optional `reasoningEffort` is resolved as: the node's value, else the task's

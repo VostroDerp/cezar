@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ClaudeCliRunner } from './claude-cli-runner.ts';
-import { CodexAppServerRunner } from './codex-app-server-runner.ts';
+import { CodexAppServerRunner, codexThreadOverrides } from './codex-app-server-runner.ts';
 import { OpencodeServerRunner } from './opencode-server-runner.ts';
 import { buildGeminiArgs } from './gemini-acp-runner.ts';
 import { opencodeReadOnlyConfig } from './private-mcp.ts';
@@ -75,6 +75,15 @@ describe('step sandbox refusal', () => {
     const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'no-network' as const };
     await expect(createRunner(backend).run(spec)).rejects.toThrow(/cannot enforce the no-network sandbox/);
     expect(() => createRunner(backend).startSession(spec)).toThrow(/cannot enforce the no-network sandbox/);
+  });
+  it('refuses no-network on an enforced read-only task on claude, and hands it to codex', () => {
+    const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'no-network' as const, enforceReadOnly: true };
+    expect(() => createRunner('claude').startSession(spec)).toThrow(/cannot enforce the no-network sandbox/);
+    const start = vi.spyOn(CodexAppServerRunner.prototype, 'startSession').mockReturnValue(undefined as never);
+    createRunner('codex').startSession(spec);
+    expect(start).toHaveBeenCalledWith(spec, undefined, undefined);
+    start.mockRestore();
+    expect(codexThreadOverrides(spec, undefined, {}).sandbox).toBe('read-only');
   });
   it.each(['pi', 'kimi', 'omp', 'antigravity'] as const)('refuses a read-only step on %s', async (backend) => {
     const spec = { userPrompt: 'x', cwd: tmpdir(), sandbox: 'read-only' as const };

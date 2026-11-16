@@ -104,7 +104,7 @@ function guardWorkingDirectory(runner: AgentRunner): AgentRunner {
     if (spec.sandbox === 'read-only' && !STEP_READ_ONLY.has(runner.backend)) {
       throw new Error(`${runner.backend} cannot keep this step read-only, so cezar will not start it there. Pick claude, codex or opencode for this step, or remove its sandbox.`);
     }
-    if (!spec.enforceReadOnly && spec.sandbox === 'no-network' && runner.backend !== 'codex') {
+    if (spec.sandbox === 'no-network' && runner.backend !== 'codex') {
       throw new Error(`${runner.backend} cannot enforce the no-network sandbox, so cezar will not start this step there. Pick codex for this step, or remove its sandbox.`);
     }
     if (!existsSync(spec.cwd)) throw new Error(missingWorkingDirectoryMessage(runner.backend, spec.cwd));
